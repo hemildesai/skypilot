@@ -161,6 +161,20 @@ def _get_cloud_dependencies_installation_commands(
             'pip list | grep azure-cli > /dev/null 2>&1 || '
             'pip install azure-cli>=2.31.0 azure-core azure-identity>=1.13.0 '
             'azure-mgmt-network > /dev/null 2>&1')
+
+    if any(
+            cloud.is_same_cloud(clouds.Kubernetes())
+            for cloud in global_user_state.get_enabled_clouds()):
+        commands.append(
+            'sudo bash -c "apt update && apt install curl socat netcat -y" && '
+            'curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && '
+            'sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && '
+            'kubectl config set-cluster pod-cluster --server="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}" --certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt && '
+            'kubectl config set-credentials pod-token --token="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" && '
+            'kubectl config set-context pod-context --cluster=the-cluster --user=pod-token && '
+            'kubectl config use-context pod-context && '
+            'sudo bash -c "curl -fsSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -o /usr/local/bin/yq && chmod a+x /usr/local/bin/yq"'
+        )
     return commands
 
 
